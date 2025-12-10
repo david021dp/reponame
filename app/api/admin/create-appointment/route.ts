@@ -8,6 +8,7 @@ import { createRateLimitResponse } from '@/lib/middleware/rate-limit-response'
 import { validateAdminAppointment } from '@/lib/validation/appointment'
 import { requireCsrfToken } from '@/lib/csrf/middleware'
 import { checkRequestSize, REQUEST_SIZE_LIMITS } from '@/lib/middleware/request-size-limit'
+import { Database } from '@/types/database.types'
 
 export async function POST(request: NextRequest) {
   // Request size check
@@ -175,10 +176,10 @@ export async function POST(request: NextRequest) {
           .insert({
             admin_id: worker_id, // Notify the assigned worker, not the admin creating it
             appointment_id: appointment.id,
-            type: 'appointment_created',
+            type: 'appointment_created' as const,
             message: `New appointment created: ${client_first_name} ${client_last_name} - ${service_name}`,
             is_read: false,
-          } as any)
+          } satisfies Database['public']['Tables']['notifications']['Insert'])
         
         if (notifError) {
           console.error('Error creating notification:', notifError)
