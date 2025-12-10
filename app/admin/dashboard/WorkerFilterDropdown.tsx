@@ -36,7 +36,8 @@ export default function WorkerFilterDropdown({
   )
 
   // Determine the current value: use currentFilter (which defaults to currentWorkerId from parent)
-  const currentValue = currentFilter ?? ''
+  // Convert null to undefined for select value prop compatibility
+  const currentValue = currentFilter ?? undefined
 
   return (
     <div className="mb-6">

@@ -181,6 +181,44 @@ export interface Database {
           created_at?: string
         }
       }
+      security_logs: {
+        Row: {
+          id: string
+          event_type: 'failed_login' | 'csrf_failure' | 'rate_limit_exceeded' | 'authorization_failure' | 'validation_failure' | 'suspicious_activity'
+          user_id: string | null
+          ip_address: string | null
+          user_agent: string | null
+          path: string | null
+          method: string | null
+          error_message: string | null
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_type: 'failed_login' | 'csrf_failure' | 'rate_limit_exceeded' | 'authorization_failure' | 'validation_failure' | 'suspicious_activity'
+          user_id?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          path?: string | null
+          method?: string | null
+          error_message?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          event_type?: 'failed_login' | 'csrf_failure' | 'rate_limit_exceeded' | 'authorization_failure' | 'validation_failure' | 'suspicious_activity'
+          user_id?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          path?: string | null
+          method?: string | null
+          error_message?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+      }
     }
   }
 }
@@ -197,4 +235,5 @@ export type AppointmentInsert = Database['public']['Tables']['appointments']['In
 export type ServiceInsert = Database['public']['Tables']['services']['Insert']
 export type AdminLogInsert = Database['public']['Tables']['admin_activity_logs']['Insert']
 export type NotificationInsert = Database['public']['Tables']['notifications']['Insert']
+export type SecurityLogInsert = Database['public']['Tables']['security_logs']['Insert']
 

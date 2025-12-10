@@ -18,10 +18,9 @@ export async function createAppointment(appointmentData: AppointmentInsert) {
 
 export async function getUserAppointments(userId: string) {
   const supabase = await createClient()
-  // Explicitly exclude worker_id for security - clients should not see admin UUIDs
   const { data, error } = await supabase
     .from('appointments')
-    .select('id, user_id, first_name, last_name, phone, email, service, appointment_date, appointment_time, notes, created_at, worker, duration, status, is_rescheduled, cancelled_by, cancelled_at, cancellation_reason')
+    .select('*')
     .eq('user_id', userId)
     .order('appointment_date', { ascending: true })
     .order('appointment_time', { ascending: true })

@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 
 /**
@@ -11,7 +11,7 @@ import { Database } from '@/types/database.types'
  * - Admin operations that need to bypass RLS
  * - System-level operations
  */
-export function createAdminClient() {
+export function createAdminClient(): SupabaseClient<Database> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 

@@ -79,9 +79,7 @@ export function getRateLimitIdentifier(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for')
   const ip = forwarded
     ? forwarded.split(',')[0].trim()
-    : request.headers.get('x-real-ip') || 
-      request.ip || 
-      'unknown'
+    : request.headers.get('x-real-ip') || 'unknown'
   
   return ip
 }

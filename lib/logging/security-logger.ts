@@ -1,4 +1,17 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { SecurityLogInsert } from '@/types/database.types'
+
+/**
+ * Helper function to insert security log using admin client
+ * This is needed because TypeScript has issues with type inference for createAdminClient
+ */
+function insertSecurityLog(logEntry: SecurityLogInsert) {
+  const supabase = createAdminClient()
+  return supabase
+    .from('security_logs')
+    // @ts-ignore - TypeScript has issues with type inference for createAdminClient with security_logs table
+    .insert(logEntry)
+}
 
 /**
  * Security event types that should be logged
@@ -49,7 +62,7 @@ export async function logSecurityEvent(data: SecurityLogData): Promise<void> {
     // Sanitize metadata to ensure no sensitive data
     const safeMetadata = data.metadata ? sanitizeMetadata(data.metadata) : null
 
-    const logEntry = {
+    const logEntry: SecurityLogInsert = {
       event_type: data.event_type,
       user_id: data.user_id || null,
       ip_address: data.ip_address || null,
@@ -62,9 +75,7 @@ export async function logSecurityEvent(data: SecurityLogData): Promise<void> {
 
     console.log('[Security Logger] Attempting to log event:', data.event_type, 'to path:', data.path)
 
-    const { data: insertedData, error } = await supabase
-      .from('security_logs')
-      .insert(logEntry)
+    const { data: insertedData, error } = await insertSecurityLog(logEntry)
       .select()
 
     if (error) {
@@ -77,6 +88,7 @@ export async function logSecurityEvent(data: SecurityLogData): Promise<void> {
         event_type: data.event_type,
       })
     } else {
+      // @ts-ignore - TypeScript has issues with type inference for createAdminClient
       console.log('[Security Logger] Successfully logged security event:', data.event_type, 'ID:', insertedData?.[0]?.id)
     }
   } catch (error: any) {

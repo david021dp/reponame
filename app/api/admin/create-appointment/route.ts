@@ -8,7 +8,8 @@ import { createRateLimitResponse } from '@/lib/middleware/rate-limit-response'
 import { validateAdminAppointment } from '@/lib/validation/appointment'
 import { requireCsrfToken } from '@/lib/csrf/middleware'
 import { checkRequestSize, REQUEST_SIZE_LIMITS } from '@/lib/middleware/request-size-limit'
-import { Database, NotificationInsert } from '@/types/database.types'
+import { createNotificationAsAdmin } from '@/lib/queries/notifications'
+import { NotificationInsert } from '@/types/database.types'
 
 export async function POST(request: NextRequest) {
   // Request size check
@@ -174,14 +175,12 @@ export async function POST(request: NextRequest) {
         const notificationData: NotificationInsert = {
           admin_id: worker_id, // Notify the assigned worker, not the admin creating it
           appointment_id: appointment.id,
-          type: 'appointment_created' as const,
+          type: 'appointment_created',
           message: `New appointment created: ${client_first_name} ${client_last_name} - ${service_name}`,
           is_read: false,
         }
 
-        const { error: notifError } = await adminSupabase
-          .from('notifications')
-          .insert(notificationData)
+        const { error: notifError } = await createNotificationAsAdmin(notificationData)
         
         if (notifError) {
           console.error('Error creating notification:', notifError)

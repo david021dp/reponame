@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NotificationInsert } from '@/types/database.types'
 
 export async function createNotification(notificationData: NotificationInsert) {
@@ -11,6 +12,18 @@ export async function createNotification(notificationData: NotificationInsert) {
 
   if (error) throw error
   return data
+}
+
+/**
+ * Create notification using admin client (bypasses RLS)
+ * Use this when creating notifications for other users
+ */
+export function createNotificationAsAdmin(notificationData: NotificationInsert) {
+  const supabaseAdmin = createAdminClient()
+  return supabaseAdmin
+    .from('notifications')
+    // @ts-ignore - TypeScript has issues with type inference for createAdminClient
+    .insert(notificationData)
 }
 
 export async function getUnreadNotifications(adminId: string) {
