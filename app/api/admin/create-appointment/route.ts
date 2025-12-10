@@ -8,7 +8,7 @@ import { createRateLimitResponse } from '@/lib/middleware/rate-limit-response'
 import { validateAdminAppointment } from '@/lib/validation/appointment'
 import { requireCsrfToken } from '@/lib/csrf/middleware'
 import { checkRequestSize, REQUEST_SIZE_LIMITS } from '@/lib/middleware/request-size-limit'
-import { Database } from '@/types/database.types'
+import { Database, NotificationInsert } from '@/types/database.types'
 
 export async function POST(request: NextRequest) {
   // Request size check
@@ -171,15 +171,17 @@ export async function POST(request: NextRequest) {
     // Use admin client to bypass RLS and ensure notification is created
     if (worker_id) {
       try {
+        const notificationData: NotificationInsert = {
+          admin_id: worker_id, // Notify the assigned worker, not the admin creating it
+          appointment_id: appointment.id,
+          type: 'appointment_created' as const,
+          message: `New appointment created: ${client_first_name} ${client_last_name} - ${service_name}`,
+          is_read: false,
+        }
+
         const { error: notifError } = await adminSupabase
           .from('notifications')
-          .insert({
-            admin_id: worker_id, // Notify the assigned worker, not the admin creating it
-            appointment_id: appointment.id,
-            type: 'appointment_created' as const,
-            message: `New appointment created: ${client_first_name} ${client_last_name} - ${service_name}`,
-            is_read: false,
-          } satisfies Database['public']['Tables']['notifications']['Insert'])
+          .insert(notificationData)
         
         if (notifError) {
           console.error('Error creating notification:', notifError)

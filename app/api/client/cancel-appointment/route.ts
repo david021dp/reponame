@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { validateCancelAppointment } from '@/lib/validation/appointment'
 import { requireCsrfToken } from '@/lib/csrf/middleware'
-import { Database } from '@/types/database.types'
+import { Database, NotificationInsert } from '@/types/database.types'
 
 export async function POST(request: NextRequest) {
   // CSRF protection
@@ -125,16 +125,19 @@ export async function POST(request: NextRequest) {
 
       // Use admin client to bypass RLS for notification creation
       const supabaseAdmin = createAdminClient()
+      
+      const notificationData: NotificationInsert = {
+        admin_id: appointment.worker_id,
+        appointment_id: appointment.id,
+        type: 'appointment_cancelled' as const,
+        message: `${clientName} cancelled their ${appointment.service} appointment on ${appointment.appointment_date} at ${appointment.appointment_time}`,
+        cancellation_reason: reason,
+        is_read: false,
+      }
+
       const { error: notifError } = await supabaseAdmin
         .from('notifications')
-        .insert({
-          admin_id: appointment.worker_id,
-          appointment_id: appointment.id,
-          type: 'appointment_cancelled' as const,
-          message: `${clientName} cancelled their ${appointment.service} appointment on ${appointment.appointment_date} at ${appointment.appointment_time}`,
-          cancellation_reason: reason,
-          is_read: false,
-        } satisfies Database['public']['Tables']['notifications']['Insert'])
+        .insert(notificationData)
 
       if (notifError) {
         console.error('Error creating notification:', notifError)

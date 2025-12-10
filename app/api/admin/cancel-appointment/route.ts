@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAdminActivity } from '@/lib/queries/admin-logs'
 import { requireCsrfToken } from '@/lib/csrf/middleware'
-import { Database } from '@/types/database.types'
+import { Database, NotificationInsert } from '@/types/database.types'
 
 export async function POST(request: NextRequest) {
   // CSRF protection
@@ -127,16 +127,18 @@ export async function POST(request: NextRequest) {
           const supabaseAdmin = createAdminClient()
           const cancellingAdminName = `${cancellingAdmin.first_name} ${cancellingAdmin.last_name}`
           
+          const notificationData: NotificationInsert = {
+            admin_id: appointmentData.worker_id,
+            appointment_id: appointment_id,
+            type: 'appointment_cancelled' as const,
+            message: `${cancellingAdminName} unblocked time slot on ${appointmentData.appointment_date} at ${appointmentData.appointment_time}`,
+            cancellation_reason: null,
+            is_read: false,
+          }
+
           await supabaseAdmin
             .from('notifications')
-            .insert({
-              admin_id: appointmentData.worker_id,
-              appointment_id: appointment_id,
-              type: 'appointment_cancelled' as const,
-              message: `${cancellingAdminName} unblocked time slot on ${appointmentData.appointment_date} at ${appointmentData.appointment_time}`,
-              cancellation_reason: null,
-              is_read: false,
-            } satisfies Database['public']['Tables']['notifications']['Insert'])
+            .insert(notificationData)
         }
       } catch (notifError: any) {
         console.error('Error creating notification for unblock:', notifError)
@@ -195,16 +197,18 @@ export async function POST(request: NextRequest) {
         const cancellingAdminName = `${cancellingAdmin.first_name} ${cancellingAdmin.last_name}`
         const clientName = `${data.first_name} ${data.last_name}`
         
+        const notificationData: NotificationInsert = {
+          admin_id: data.worker_id,
+          appointment_id: appointment_id,
+          type: 'appointment_cancelled' as const,
+          message: `${cancellingAdminName} cancelled ${clientName}'s ${data.service} appointment on ${data.appointment_date} at ${data.appointment_time}`,
+          cancellation_reason: null,
+          is_read: false,
+        }
+
         await supabaseAdmin
           .from('notifications')
-          .insert({
-            admin_id: data.worker_id,
-            appointment_id: appointment_id,
-            type: 'appointment_cancelled' as const,
-            message: `${cancellingAdminName} cancelled ${clientName}'s ${data.service} appointment on ${data.appointment_date} at ${data.appointment_time}`,
-            cancellation_reason: null,
-            is_read: false,
-          } satisfies Database['public']['Tables']['notifications']['Insert'])
+          .insert(notificationData)
       }
     } catch (notifError: any) {
       console.error('Error creating notification for cancellation:', notifError)
