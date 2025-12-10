@@ -1,0 +1,62 @@
+================================================================================
+QUICK GUIDE: ADD SERVICE ROLE KEY
+================================================================================
+
+⚠️ REQUIRED STEP - Notifications won't work without this!
+
+================================================================================
+STEP 1: GET YOUR KEY
+================================================================================
+
+Open this link:
+https://supabase.com/dashboard/project/eplmpbhbumynkelpzwos/settings/api
+
+Find: "service_role" key
+Click: "Reveal"
+Copy: The entire key (very long string starting with eyJ...)
+
+================================================================================
+STEP 2: ADD TO .env.local
+================================================================================
+
+In PowerShell (my-app folder):
+-------------------------------
+Add-Content -Path .env.local -Value "`nSUPABASE_SERVICE_ROLE_KEY=PASTE_YOUR_KEY_HERE"
+
+(Replace PASTE_YOUR_KEY_HERE with the actual key)
+
+OR Edit Manually:
+-----------------
+Open: my-app/.env.local
+Add this line at the end:
+
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.YOUR_ACTUAL_KEY
+
+⚠️ NO "NEXT_PUBLIC_" prefix! (This is server-only)
+
+================================================================================
+STEP 3: RESTART SERVER
+================================================================================
+
+Stop current server: Ctrl+C
+Start again: npm run dev
+
+================================================================================
+STEP 4: TEST
+================================================================================
+
+1. Log in as client
+2. Go to "My Appointments"  
+3. Click "Cancel"
+4. Enter reason
+5. Click "Cancel Appointment"
+6. ✅ Should work without errors!
+
+================================================================================
+DONE!
+================================================================================
+
+Your notification system will now work perfectly and securely.
+
+See SERVICE_ROLE_SETUP.md for detailed explanation.
+
