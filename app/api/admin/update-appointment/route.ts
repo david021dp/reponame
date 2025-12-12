@@ -9,6 +9,7 @@ import { createRateLimitResponse } from '@/lib/middleware/rate-limit-response'
 import { requireCsrfToken } from '@/lib/csrf/middleware'
 import { checkRequestSize, REQUEST_SIZE_LIMITS } from '@/lib/middleware/request-size-limit'
 import { getWorkerAppointmentsForDate } from '@/lib/queries/appointments'
+import { Appointment } from '@/types/database.types'
 
 export async function POST(request: NextRequest) {
   // Request size check
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       .from('appointments')
       .select('*')
       .eq('id', appointment_id)
-      .single()
+      .single<Appointment>()
 
     if (fetchError || !existingAppointment) {
       return NextResponse.json(
