@@ -64,6 +64,16 @@ export default async function AdminDashboardPage({
     }
   }
 
+  // Calculate display name for Navbar
+  // If head_admin filters to another worker, show that worker's first name; otherwise show their own
+  let displayNameForNavbar = user.first_name
+  if (user.role === 'head_admin' && filterWorkerId && filterWorkerId !== 'all') {
+    const selectedAdmin = admins.find(admin => admin.id === filterWorkerId)
+    if (selectedAdmin) {
+      displayNameForNavbar = selectedAdmin.first_name
+    }
+  }
+
   // Calculate which admin ID to use for notifications
   // If head_admin is filtering to view another admin, show that admin's notifications
   // Otherwise, show head_admin's own notifications
@@ -93,7 +103,7 @@ export default async function AdminDashboardPage({
     <div className="min-h-screen">
       <Navbar 
         userRole={user.role} 
-        userName={user.first_name} 
+        userName={displayNameForNavbar} 
         userId={user.id}
         notificationsAdminId={notificationsAdminId}
       />

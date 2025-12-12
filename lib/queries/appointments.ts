@@ -172,3 +172,58 @@ export async function getClientCreatedAppointmentsCountForUTC1Day(
   return count || 0
 }
 
+export async function updateAppointment(
+  appointmentId: string,
+  updates: {
+    service?: string
+    appointment_date?: string
+    appointment_time?: string
+    duration?: number
+    notes?: string | null
+  },
+  adminId?: string
+) {
+  const supabase = await createClient()
+  
+  const updateData: any = {}
+  if (updates.service !== undefined) updateData.service = updates.service
+  if (updates.appointment_date !== undefined) updateData.appointment_date = updates.appointment_date
+  if (updates.appointment_time !== undefined) updateData.appointment_time = updates.appointment_time
+  if (updates.duration !== undefined) updateData.duration = updates.duration
+  if (updates.notes !== undefined) updateData.notes = updates.notes
+  
+  // Set is_rescheduled if date or time changed
+  if (updates.appointment_date !== undefined || updates.appointment_time !== undefined) {
+    updateData.is_rescheduled = true
+  }
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .update(updateData)
+    .eq('id', appointmentId)
+    .select()
+    .single()
+
+  if (error) throw error
+
+  // Log admin activity if adminId is provided
+  // Use 'reschedule_appointment' if date/time changed, otherwise skip logging
+  // (Database constraint may not include 'update_appointment' yet)
+  if (adminId) {
+    try {
+      if (updates.appointment_date !== undefined || updates.appointment_time !== undefined) {
+        await logAdminActivity(adminId, 'reschedule_appointment', {
+          appointment_id: appointmentId,
+          new_date: updates.appointment_date,
+          new_time: updates.appointment_time,
+        })
+      }
+    } catch (logError) {
+      // Logging failure shouldn't break the update
+      console.warn('Failed to log admin activity:', logError)
+    }
+  }
+
+  return data
+}
+

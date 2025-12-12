@@ -19,6 +19,7 @@ import {
 } from '@/lib/utils/calendarHelpers'
 import CreateAppointmentModal from './CreateAppointmentModal'
 import BlockTimeModal from './BlockTimeModal'
+import EditAppointmentModal from './EditAppointmentModal'
 import { sanitizeText } from '@/lib/utils/sanitize'
 
 interface WeeklyCalendarProps {
@@ -139,6 +140,8 @@ export default function WeeklyCalendar({
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showBlockModal, setShowBlockModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [appointmentToEdit, setAppointmentToEdit] = useState<Appointment | null>(null)
   
   const weekDates = getWeekDays(currentWeekStart)
   const timeSlots = getTimeSlots()
@@ -344,6 +347,23 @@ export default function WeeklyCalendar({
         onClose={() => setShowBlockModal(false)}
         adminId={adminId}
         workerName={workerName}
+      />
+
+      {/* Edit Appointment Modal */}
+      <EditAppointmentModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          setAppointmentToEdit(null)
+        }}
+        appointment={appointmentToEdit}
+        adminId={adminId}
+        workerName={workerName}
+        onSuccess={() => {
+          setShowEditModal(false)
+          setAppointmentToEdit(null)
+          // Real-time subscription will handle the UI update
+        }}
       />
       
       {/* Appointment Details Modal */}
@@ -554,15 +574,27 @@ export default function WeeklyCalendar({
                 Close
               </button>
               {selectedAppointment.status === 'scheduled' && (
-                <button
-                  onClick={(e) => {
-                    handleCancel(e, selectedAppointment.id)
-                    setSelectedAppointment(null)
-                  }}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-rose-500 text-white rounded-xl font-semibold hover:from-red-600 hover:to-rose-600 transition-all shadow-lg"
-                >
-                  ✕ Cancel Appointment
-                </button>
+                <>
+                  <button
+                    onClick={() => {
+                      setAppointmentToEdit(selectedAppointment)
+                      setShowEditModal(true)
+                      setSelectedAppointment(null)
+                    }}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all shadow-lg"
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      handleCancel(e, selectedAppointment.id)
+                      setSelectedAppointment(null)
+                    }}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-rose-500 text-white rounded-xl font-semibold hover:from-red-600 hover:to-rose-600 transition-all shadow-lg"
+                  >
+                    ✕ Cancel
+                  </button>
+                </>
               )}
               </div>
             </>

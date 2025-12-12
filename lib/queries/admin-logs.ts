@@ -3,7 +3,7 @@ import { AdminLogInsert } from '@/types/database.types'
 
 export async function logAdminActivity(
   adminId: string,
-  actionType: 'register_client' | 'create_appointment' | 'cancel_appointment' | 'reschedule_appointment',
+  actionType: 'register_client' | 'create_appointment' | 'cancel_appointment' | 'reschedule_appointment' | 'update_appointment',
   details?: Record<string, any>
 ) {
   const supabase = await createClient()

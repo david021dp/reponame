@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getCsrfToken, CSRF_HEADER_NAME } from '@/lib/csrf/client'
 
 interface RegisterFormProps {
@@ -19,6 +19,18 @@ export default function RegisterForm({ adminId }: RegisterFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  
+  // Get worker query parameter if present (for preserving filter on redirect)
+  const workerParam = searchParams.get('worker')
+  
+  // Build redirect URL preserving worker filter
+  const getDashboardUrl = () => {
+    if (workerParam) {
+      return `/admin/dashboard?worker=${encodeURIComponent(workerParam)}`
+    }
+    return '/admin/dashboard'
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -76,7 +88,7 @@ export default function RegisterForm({ adminId }: RegisterFormProps) {
 
       // Show success message for 2 seconds then redirect
       setTimeout(() => {
-        router.push('/admin/dashboard')
+        router.push(getDashboardUrl())
         router.refresh()
       }, 2000)
     } catch (err: any) {

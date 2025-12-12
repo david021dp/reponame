@@ -72,16 +72,22 @@ export function rateLimit(
 }
 
 /**
- * Get rate limit identifier from request (IP address)
+ * Get rate limit identifier from request
+ * Uses user ID for authenticated users, IP for anonymous
  */
-export function getRateLimitIdentifier(request: NextRequest): string {
-  // Try to get real IP from headers (handles proxies)
+export function getRateLimitIdentifier(request: NextRequest, userId?: string): string {
+  // If user is authenticated, use their user ID (separates admins/clients)
+  if (userId) {
+    return `user:${userId}`
+  }
+  
+  // For anonymous requests, use IP address
   const forwarded = request.headers.get('x-forwarded-for')
   const ip = forwarded
     ? forwarded.split(',')[0].trim()
     : request.headers.get('x-real-ip') || 'unknown'
   
-  return ip
+  return `ip:${ip}`
 }
 
 /**
@@ -94,10 +100,16 @@ export const RATE_LIMITS = {
   // Authentication routes: 10 requests per hour (brute force protection)
   auth: { maxRequests: 10, windowMs: 60 * 60 * 1000 },
   
-  // Appointment creation: 10 appointments per hour
+  // Appointment creation: 10 appointments per hour (for clients)
   appointments: { maxRequests: 10, windowMs: 60 * 60 * 1000 },
   
-  // Admin registration: 20 registrations per hour
-  registration: { maxRequests: 20, windowMs: 60 * 60 * 1000 },
+  // Admin appointment creation: 100 appointments per hour (for admins/head_admins)
+  adminAppointments: { maxRequests: 100, windowMs: 60 * 60 * 1000 },
+  
+  // Admin appointment updates: 100 updates per hour (for admins/head_admins)
+  adminAppointmentUpdates: { maxRequests: 100, windowMs: 60 * 60 * 1000 },
+  
+  // Admin registration: 100 registrations per hour (for admins/head_admins)
+  registration: { maxRequests: 100, windowMs: 60 * 60 * 1000 },
 } as const
 

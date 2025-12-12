@@ -127,7 +127,8 @@ export default function RealTimeClientAppointments({
         )
         .subscribe((status, err) => {
           if (status === 'CHANNEL_ERROR' && isSubscribed) {
-            console.error('Subscription error, retrying in 2s...', err)
+            const errorMessage = err?.message || err || 'Unknown error'
+            console.error('Subscription error, retrying in 2s...', errorMessage)
             // FIX #4: Auto-reconnect on error
             retryTimeout = setTimeout(() => {
               if (isSubscribed) {

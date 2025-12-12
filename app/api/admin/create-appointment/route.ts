@@ -24,13 +24,6 @@ export async function POST(request: NextRequest) {
     return csrfCheck.response!
   }
 
-  // Rate limiting for appointment creation
-  const identifier = getRateLimitIdentifier(request)
-  const limitResult = rateLimit(identifier, RATE_LIMITS.appointments.maxRequests, RATE_LIMITS.appointments.windowMs)
-  if (!limitResult.allowed) {
-    return createRateLimitResponse(limitResult, request)
-  }
-
   try {
     const supabase = await createClient()
     
@@ -57,6 +50,13 @@ export async function POST(request: NextRequest) {
         { error: 'Forbidden - Admin access required' },
         { status: 403 }
       )
+    }
+
+    // Rate limiting - use user ID and admin limit for admins/head_admins
+    const identifier = getRateLimitIdentifier(request, user.id)
+    const limitResult = rateLimit(identifier, RATE_LIMITS.adminAppointments.maxRequests, RATE_LIMITS.adminAppointments.windowMs)
+    if (!limitResult.allowed) {
+      return createRateLimitResponse(limitResult, request)
     }
 
     // Parse request body (using the same NextRequest object to avoid body consumption issues)

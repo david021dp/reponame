@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { signOut } from '@/lib/auth/helpers'
 import NotificationBell from './NotificationBell'
 
@@ -14,6 +14,20 @@ interface NavbarProps {
 
 export default function Navbar({ userRole, userName, userId, notificationsAdminId }: NavbarProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  
+  // Get worker query parameter if present (for head_admin filter preservation)
+  const workerParam = searchParams.get('worker')
+  
+  // Build query string for admin pages (preserve worker filter for head_admin)
+  const getAdminQueryString = () => {
+    if (userRole === 'head_admin' && workerParam) {
+      return `?worker=${encodeURIComponent(workerParam)}`
+    }
+    return ''
+  }
+  
+  const adminQueryString = getAdminQueryString()
 
   const handleSignOut = async () => {
     try {
@@ -30,7 +44,7 @@ export default function Navbar({ userRole, userName, userId, notificationsAdminI
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 sm:h-20">
           <div className="flex items-center">
-            <Link href={(userRole === 'admin' || userRole === 'head_admin') ? '/admin/dashboard' : '/client/schedule'}>
+            <Link href={(userRole === 'admin' || userRole === 'head_admin') ? `/admin/dashboard${adminQueryString}` : '/client/schedule'}>
               <div className="flex items-center space-x-2 sm:space-x-3 group cursor-pointer">
                 <div className="p-1.5 sm:p-2 bg-gradient-to-br from-pink-100 to-purple-100 rounded-lg sm:rounded-xl group-hover:from-pink-200 group-hover:to-purple-200 transition-all">
                   <svg className="w-5 h-5 sm:w-7 sm:h-7 text-pink-600" fill="currentColor" viewBox="0 0 24 24">
@@ -48,7 +62,7 @@ export default function Navbar({ userRole, userName, userId, notificationsAdminI
             {(userRole === 'admin' || userRole === 'head_admin') ? (
               <>
                 <Link
-                  href="/admin/dashboard"
+                  href={`/admin/dashboard${adminQueryString}`}
                   className="text-gray-700 hover:text-pink-600 hover:bg-pink-50 px-2 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all"
                 >
                   <span className="hidden sm:inline">Dashboard</span>
@@ -57,7 +71,7 @@ export default function Navbar({ userRole, userName, userId, notificationsAdminI
                   </svg>
                 </Link>
                 <Link
-                  href="/admin/register"
+                  href={`/admin/register${adminQueryString}`}
                   className="text-gray-700 hover:text-pink-600 hover:bg-pink-50 px-2 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all"
                 >
                   <span className="hidden sm:inline">Register</span>

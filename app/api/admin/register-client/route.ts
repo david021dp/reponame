@@ -22,13 +22,6 @@ export async function POST(request: Request) {
     return csrfCheck.response!
   }
 
-  // Rate limiting for registration
-  const identifier = getRateLimitIdentifier(req)
-  const limitResult = rateLimit(identifier, RATE_LIMITS.registration.maxRequests, RATE_LIMITS.registration.windowMs)
-  if (!limitResult.allowed) {
-    return createRateLimitResponse(limitResult, req)
-  }
-
   try {
     const supabase = await createClient()
     
@@ -56,6 +49,13 @@ export async function POST(request: Request) {
         { error: 'Forbidden - Admin access required' },
         { status: 403 }
       )
+    }
+
+    // Rate limiting - use user ID for authenticated admins
+    const identifier = getRateLimitIdentifier(req, user.id)
+    const limitResult = rateLimit(identifier, RATE_LIMITS.registration.maxRequests, RATE_LIMITS.registration.windowMs)
+    if (!limitResult.allowed) {
+      return createRateLimitResponse(limitResult, req)
     }
 
     const rawBody = await request.json()

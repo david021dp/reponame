@@ -1,18 +1,89 @@
 import { getCurrentUser } from '@/lib/auth/server-helpers'
+import { getAdmins } from '@/lib/queries/users'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import RegisterForm from './RegisterForm'
 
-export default async function AdminRegisterPage() {
+export default async function AdminRegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ worker?: string }>
+}) {
   const user = await getCurrentUser()
 
   if (!user || (user.role !== 'admin' && user.role !== 'head_admin')) {
     redirect('/login')
   }
 
+  const workerId = user.id
+  
+  // Await searchParams before accessing properties
+  const resolvedSearchParams = await searchParams
+  
+  // For head_admin: get filter from search params, default to their own ID
+  let filterWorkerId: string | 'all' | undefined = undefined
+  if (user.role === 'head_admin') {
+    const workerParam = resolvedSearchParams?.worker
+    
+    if (workerParam === 'all') {
+      filterWorkerId = 'all'
+    } else if (workerParam) {
+      // Validate if it's a valid UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      if (uuidRegex.test(workerParam)) {
+        // It's a valid UUID, use it directly
+        filterWorkerId = workerParam
+      } else {
+        // It's not a UUID (probably an old worker name), default to current worker's ID
+        filterWorkerId = workerId
+      }
+    } else {
+      // No param, default to current worker's ID
+      filterWorkerId = workerId
+    }
+  }
+
+  // Fetch admins list for head_admin
+  const admins = user.role === 'head_admin' 
+    ? await getAdmins()
+    : []
+
+  // Calculate display name for Navbar
+  // If head_admin filters to another worker, show that worker's first name; otherwise show their own
+  let displayNameForNavbar = user.first_name
+  if (user.role === 'head_admin' && filterWorkerId && filterWorkerId !== 'all') {
+    const selectedAdmin = admins.find(admin => admin.id === filterWorkerId)
+    if (selectedAdmin) {
+      displayNameForNavbar = selectedAdmin.first_name
+    }
+  }
+
+  // Calculate which admin ID to use for notifications
+  const notificationsAdminId = 
+    user.role === 'head_admin' && 
+    filterWorkerId && 
+    filterWorkerId !== 'all'
+      ? filterWorkerId  // Selected admin's notifications
+      : user.id        // Own notifications
+
+  // Determine which admin ID to use for registering clients
+  // If head_admin is filtering to view another admin, register clients for that admin
+  // Otherwise, register for head_admin themselves
+  const adminIdForRegistration = 
+    user.role === 'head_admin' && 
+    filterWorkerId && 
+    filterWorkerId !== 'all'
+      ? filterWorkerId  // Selected admin's clients
+      : user.id        // Own clients
+
   return (
     <div className="min-h-screen">
-      <Navbar userRole={user.role} userName={user.first_name} userId={user.id} />
+      <Navbar 
+        userRole={user.role} 
+        userName={displayNameForNavbar} 
+        userId={user.id}
+        notificationsAdminId={notificationsAdminId}
+      />
       
       <div className="max-w-2xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-pink-100 p-10">
@@ -30,7 +101,7 @@ export default async function AdminRegisterPage() {
             </p>
           </div>
 
-          <RegisterForm adminId={user.id} />
+          <RegisterForm adminId={adminIdForRegistration} />
         </div>
       </div>
     </div>
