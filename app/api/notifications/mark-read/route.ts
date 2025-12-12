@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { Notification } from '@/types/database.types'
 
 export async function POST(request: Request) {
   try {
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
       .eq('id', notification_id)
       .eq('admin_id', user.id) // Verify ownership
       .select()
-      .single()
+      .single<Notification>()
 
     if (error) {
       console.error('Error marking notification as read:', error)

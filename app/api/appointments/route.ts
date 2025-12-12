@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { AppointmentInsert } from '@/types/database.types'
+import { AppointmentInsert, Appointment } from '@/types/database.types'
 import { rateLimit, getRateLimitIdentifier, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 import { createRateLimitResponse } from '@/lib/middleware/rate-limit-response'
 import { validateAppointment } from '@/lib/validation/appointment'
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
       .from('appointments')
       .insert(body)
       .select()
-      .single()
+      .single<Appointment>()
 
     if (error) {
       console.error('[POST /api/appointments] Database error:', error.code, error.message)

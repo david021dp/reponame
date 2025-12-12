@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { User } from '@/types/database.types'
 
 export async function GET(request: Request) {
   try {
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
       .from('users')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .single<Pick<User, 'role'>>()
 
     // Get adminId from query parameter (for head_admin filtering)
     const { searchParams } = new URL(request.url)

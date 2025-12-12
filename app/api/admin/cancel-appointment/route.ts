@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { logAdminActivity } from '@/lib/queries/admin-logs'
 import { requireCsrfToken } from '@/lib/csrf/middleware'
 import { createNotificationAsAdmin } from '@/lib/queries/notifications'
-import { NotificationInsert } from '@/types/database.types'
+import { NotificationInsert, Appointment, User } from '@/types/database.types'
 
 export async function POST(request: NextRequest) {
   // CSRF protection
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .single<Pick<User, 'role'>>()
 
     if (userData?.role !== 'admin' && userData?.role !== 'head_admin') {
       return NextResponse.json(
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       .from('appointments')
       .select('*')
       .eq('id', appointment_id)
-      .single()
+      .single<Appointment>()
 
     if (fetchError) {
       // If appointment doesn't exist, return success (it's already gone)
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
           .from('users')
           .select('first_name, last_name')
           .eq('id', admin_id)
-          .single()
+          .single<Pick<User, 'first_name' | 'last_name'>>()
 
         // Use worker_id directly from appointment
         if (appointmentData.worker_id && cancellingAdmin) {
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
       .update({ status: 'cancelled' })
       .eq('id', appointment_id)
       .select()
-      .single()
+      .single<Appointment>()
 
     if (error) {
       console.error('Error cancelling appointment:', error)

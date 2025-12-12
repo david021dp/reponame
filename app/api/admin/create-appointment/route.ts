@@ -9,7 +9,7 @@ import { validateAdminAppointment } from '@/lib/validation/appointment'
 import { requireCsrfToken } from '@/lib/csrf/middleware'
 import { checkRequestSize, REQUEST_SIZE_LIMITS } from '@/lib/middleware/request-size-limit'
 import { createNotificationAsAdmin } from '@/lib/queries/notifications'
-import { NotificationInsert } from '@/types/database.types'
+import { NotificationInsert, Appointment, User } from '@/types/database.types'
 
 export async function POST(request: NextRequest) {
   // Request size check
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('email')
       .eq('id', admin_id)
-      .single()
+      .single<Pick<User, 'email'>>()
 
     const adminEmail = adminUser?.email || 'admin@system.local'
 
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       .from('appointments')
       .insert(insertData)
       .select()
-      .single()
+      .single<Appointment>()
 
     if (appointmentError) {
       console.error('Error creating appointment:', appointmentError)

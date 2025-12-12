@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { validateCancelAppointment } from '@/lib/validation/appointment'
 import { requireCsrfToken } from '@/lib/csrf/middleware'
 import { createNotificationAsAdmin } from '@/lib/queries/notifications'
-import { NotificationInsert } from '@/types/database.types'
+import { NotificationInsert, Appointment } from '@/types/database.types'
 
 export async function POST(request: NextRequest) {
   // CSRF protection
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       .select('*, user_id, worker, service, appointment_date, appointment_time, duration')
       .eq('id', appointment_id)
       .eq('user_id', user.id) // Verify ownership
-      .single()
+      .single<Appointment>()
 
     if (fetchError || !appointment) {
       return NextResponse.json(
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', appointment_id)
       .select()
-      .single()
+      .single<Appointment>()
 
     if (updateError) {
       console.error('[POST /api/client/cancel-appointment] Database error:', updateError.code, updateError.message)

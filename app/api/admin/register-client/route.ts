@@ -7,6 +7,7 @@ import { createRateLimitResponse } from '@/lib/middleware/rate-limit-response'
 import { validateRegisterClient } from '@/lib/validation/appointment'
 import { requireCsrfToken } from '@/lib/csrf/middleware'
 import { checkRequestSize, REQUEST_SIZE_LIMITS } from '@/lib/middleware/request-size-limit'
+import { User } from '@/types/database.types'
 
 export async function POST(request: Request) {
   // Request size check
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
       .from('users')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .single<Pick<User, 'role'>>()
 
     if (userData?.role !== 'admin' && userData?.role !== 'head_admin') {
       return NextResponse.json(
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
         phone: phone || null,
       })
       .select()
-      .single()
+      .single<User>()
 
     if (userError) {
       console.error('Error creating user record:', userError)
