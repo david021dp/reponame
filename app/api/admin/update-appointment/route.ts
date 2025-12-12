@@ -157,12 +157,20 @@ export async function POST(request: NextRequest) {
 
     // Check time slot availability (excluding current appointment)
     // Fetch all appointments for this worker/date with IDs to properly exclude current appointment
+    type AppointmentConflict = {
+      id: string
+      appointment_time: string
+      duration: number
+      status: string
+    }
+    
     const { data: existingAppointments, error: appointmentsError } = await adminSupabase
       .from('appointments')
       .select('id, appointment_time, duration, status')
       .eq('worker_id', worker_id)
       .eq('appointment_date', appointment_date)
       .eq('status', 'scheduled')
+      .returns<AppointmentConflict[]>()
 
     if (appointmentsError) {
       console.error('Error fetching appointments:', appointmentsError)
