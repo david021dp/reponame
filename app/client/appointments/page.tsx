@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 import RealTimeClientAppointments from './RealTimeClientAppointments'
+import ClientRescheduleModal from '@/components/ClientRescheduleModal'
 
 export default async function ClientAppointmentsPage() {
   const user = await getCurrentUser()
@@ -17,6 +18,7 @@ export default async function ClientAppointmentsPage() {
   return (
     <div className="min-h-screen">
       <Navbar userRole="client" userName={user.first_name} userId={user.id} />
+      <ClientRescheduleModal userId={user.id} />
       
       <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="mb-10 text-center">

@@ -4,6 +4,7 @@ import { getServices } from '@/lib/queries/services'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import ScheduleForm from './ScheduleForm'
+import ClientRescheduleModal from '@/components/ClientRescheduleModal'
 
 export default async function ClientSchedulePage() {
   const user = await getCurrentUser()
@@ -25,6 +26,7 @@ export default async function ClientSchedulePage() {
   return (
     <div className="min-h-screen">
       <Navbar userRole="client" userName={user.first_name} userId={user.id} />
+      <ClientRescheduleModal userId={user.id} />
       
       <div className="max-w-4xl mx-auto py-6 sm:py-12 px-4 sm:px-6 lg:px-8">
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl border border-pink-100 p-6 sm:p-10">

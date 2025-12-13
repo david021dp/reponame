@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signOut } from '@/lib/auth/helpers'
 import NotificationBell from './NotificationBell'
+import { useState, useEffect, useMemo } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 interface NavbarProps {
   userRole: 'admin' | 'client' | 'head_admin'
@@ -15,6 +17,11 @@ interface NavbarProps {
 export default function Navbar({ userRole, userName, userId, notificationsAdminId }: NavbarProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [clientUnreadCount, setClientUnreadCount] = useState(0)
+  const [isHydrated, setIsHydrated] = useState(false)
+  
+  // Create stable Supabase client
+  const supabase = useMemo(() => createClient(), [])
   
   // Get worker query parameter if present (for head_admin filter preservation)
   const workerParam = searchParams.get('worker')
@@ -28,6 +35,95 @@ export default function Navbar({ userRole, userName, userId, notificationsAdminI
   }
   
   const adminQueryString = getAdminQueryString()
+
+  // Fetch client unread notification count
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isHydrated || userRole !== 'client' || !userId) return
+
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await fetch('/api/client/notifications')
+        if (response.ok) {
+          const data = await response.json()
+          setClientUnreadCount(data.unreadCount || 0)
+        }
+      } catch (error) {
+        console.error('Error fetching client unread count:', error)
+      }
+    }
+
+    fetchUnreadCount()
+
+    // Subscribe to realtime changes for client notifications
+    let isSubscribed = true
+
+    const syncRealtimeAuth = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession()
+        if (error) return
+        const token = data.session?.access_token
+        if (token && isSubscribed) {
+          supabase.realtime.setAuth(token)
+        }
+      } catch (err) {
+        console.warn('Navbar: Error syncing Realtime auth', err)
+      }
+    }
+
+    syncRealtimeAuth()
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (isSubscribed && session?.access_token) {
+        supabase.realtime.setAuth(session.access_token)
+      }
+    })
+
+    const channel = supabase
+      .channel(`navbar-client-notifications-${userId}`, {
+        config: {
+          broadcast: { self: true },
+        },
+      })
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          if (!isSubscribed) return
+
+          if (payload.eventType === 'INSERT') {
+            const newNotification = payload.new as { is_read: boolean }
+            if (!newNotification.is_read) {
+              setClientUnreadCount((prev) => prev + 1)
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedNotification = payload.new as { is_read: boolean }
+            if (updatedNotification.is_read) {
+              setClientUnreadCount((prev) => Math.max(0, prev - 1))
+            }
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR' && isSubscribed) {
+          console.error('Navbar client notification subscription error:', err?.message || err || 'Unknown error')
+        }
+      })
+
+    return () => {
+      isSubscribed = false
+      authListener?.subscription.unsubscribe()
+      supabase.removeChannel(channel)
+    }
+  }, [isHydrated, userRole, userId, supabase])
 
   const handleSignOut = async () => {
     try {
@@ -96,12 +192,18 @@ export default function Navbar({ userRole, userName, userId, notificationsAdminI
                 </Link>
                 <Link
                   href="/client/appointments"
-                  className="text-gray-700 hover:text-pink-600 hover:bg-pink-50 px-2 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all"
+                  className="relative text-gray-700 hover:text-pink-600 hover:bg-pink-50 px-2 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all"
                 >
                   <span className="hidden sm:inline">Appointments</span>
                   <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
+                  {/* Red dot indicator for unread notifications */}
+                  {clientUnreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg animate-pulse">
+                      {clientUnreadCount > 9 ? '9+' : clientUnreadCount}
+                    </span>
+                  )}
                 </Link>
               </>
             )}

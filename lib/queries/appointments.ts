@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { AppointmentInsert } from '@/types/database.types'
+import { AppointmentInsert, Appointment } from '@/types/database.types'
 import { logAdminActivity } from './admin-logs'
 import { getUtcRangeForUTC1Day } from '@/lib/utils/timezone'
+import { createClientNotification } from './notifications'
 
 export async function createAppointment(appointmentData: AppointmentInsert) {
   const supabase = await createClient()
@@ -185,6 +186,15 @@ export async function updateAppointment(
 ) {
   const supabase = await createClient()
   
+  // Get existing appointment to get user_id and old date/time
+  const { data: existingAppointment, error: fetchError } = await supabase
+    .from('appointments')
+    .select('user_id, appointment_date, appointment_time, service, worker')
+    .eq('id', appointmentId)
+    .single<Pick<Appointment, 'user_id' | 'appointment_date' | 'appointment_time' | 'service' | 'worker'>>()
+
+  if (fetchError) throw fetchError
+  
   const updateData: any = {}
   if (updates.service !== undefined) updateData.service = updates.service
   if (updates.appointment_date !== undefined) updateData.appointment_date = updates.appointment_date
@@ -193,7 +203,8 @@ export async function updateAppointment(
   if (updates.notes !== undefined) updateData.notes = updates.notes
   
   // Set is_rescheduled if date or time changed
-  if (updates.appointment_date !== undefined || updates.appointment_time !== undefined) {
+  const isRescheduled = updates.appointment_date !== undefined || updates.appointment_time !== undefined
+  if (isRescheduled) {
     updateData.is_rescheduled = true
   }
 
@@ -211,7 +222,7 @@ export async function updateAppointment(
   // (Database constraint may not include 'update_appointment' yet)
   if (adminId) {
     try {
-      if (updates.appointment_date !== undefined || updates.appointment_time !== undefined) {
+      if (isRescheduled) {
         await logAdminActivity(adminId, 'reschedule_appointment', {
           appointment_id: appointmentId,
           new_date: updates.appointment_date,
@@ -221,6 +232,49 @@ export async function updateAppointment(
     } catch (logError) {
       // Logging failure shouldn't break the update
       console.warn('Failed to log admin activity:', logError)
+    }
+  }
+
+  // Create client notification if appointment was rescheduled
+  if (isRescheduled && existingAppointment?.user_id) {
+    try {
+      const oldDate = existingAppointment.appointment_date
+      const oldTime = existingAppointment.appointment_time
+      const newDate = updates.appointment_date || oldDate
+      const newTime = updates.appointment_time || oldTime
+
+      // Format date for display
+      const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr)
+        return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+      }
+
+      // Format time for display
+      const formatTime = (timeStr: string) => {
+        const [hours, minutes] = timeStr.split(':')
+        const hour = parseInt(hours, 10)
+        const ampm = hour >= 12 ? 'PM' : 'AM'
+        const displayHour = hour % 12 || 12
+        return `${displayHour}:${minutes} ${ampm}`
+      }
+
+      const message = `Your appointment for ${existingAppointment.service} has been rescheduled from ${formatDate(oldDate)} at ${formatTime(oldTime)} to ${formatDate(newDate)} at ${formatTime(newTime)}.`
+
+      // Store worker name in cancellation_reason field (repurposed for worker name)
+      const workerName = existingAppointment.worker || 'Admin'
+
+      await createClientNotification({
+        user_id: existingAppointment.user_id,
+        admin_id: null,
+        appointment_id: appointmentId,
+        type: 'appointment_rescheduled',
+        message: message,
+        cancellation_reason: workerName, // Repurposed to store worker name
+        is_read: false,
+      })
+    } catch (notifError) {
+      // Notification failure shouldn't break the update
+      console.warn('Failed to create client notification:', notifError)
     }
   }
 

@@ -152,9 +152,10 @@ export interface Database {
       notifications: {
         Row: {
           id: string
-          admin_id: string
+          admin_id: string | null
+          user_id: string | null
           appointment_id: string | null
-          type: 'appointment_cancelled' | 'appointment_created'
+          type: 'appointment_cancelled' | 'appointment_created' | 'appointment_rescheduled'
           message: string
           cancellation_reason: string | null
           is_read: boolean
@@ -162,9 +163,10 @@ export interface Database {
         }
         Insert: {
           id?: string
-          admin_id: string
+          admin_id?: string | null
+          user_id?: string | null
           appointment_id?: string | null
-          type: 'appointment_cancelled' | 'appointment_created'
+          type: 'appointment_cancelled' | 'appointment_created' | 'appointment_rescheduled'
           message: string
           cancellation_reason?: string | null
           is_read?: boolean
@@ -172,9 +174,10 @@ export interface Database {
         }
         Update: {
           id?: string
-          admin_id?: string
+          admin_id?: string | null
+          user_id?: string | null
           appointment_id?: string | null
-          type?: 'appointment_cancelled' | 'appointment_created'
+          type?: 'appointment_cancelled' | 'appointment_created' | 'appointment_rescheduled'
           message?: string
           cancellation_reason?: string | null
           is_read?: boolean

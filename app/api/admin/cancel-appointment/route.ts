@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { logAdminActivity } from '@/lib/queries/admin-logs'
 import { requireCsrfToken } from '@/lib/csrf/middleware'
-import { createNotificationAsAdmin } from '@/lib/queries/notifications'
+import { createNotificationAsAdmin, createClientNotification } from '@/lib/queries/notifications'
 import { NotificationInsert, Appointment, User } from '@/types/database.types'
 
 export async function POST(request: NextRequest) {
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
         .from('users')
         .select('first_name, last_name')
         .eq('id', admin_id)
-        .single()
+        .single<Pick<User, 'first_name' | 'last_name'>>()
 
       // Use worker_id directly from appointment
       if (data.worker_id && cancellingAdmin) {
@@ -195,6 +195,7 @@ export async function POST(request: NextRequest) {
         
         const notificationData: NotificationInsert = {
           admin_id: data.worker_id,
+          user_id: null,
           appointment_id: appointment_id,
           type: 'appointment_cancelled',
           message: `${cancellingAdminName} cancelled ${clientName}'s ${data.service} appointment on ${data.appointment_date} at ${data.appointment_time}`,
@@ -207,6 +208,40 @@ export async function POST(request: NextRequest) {
     } catch (notifError: any) {
       console.error('Error creating notification for cancellation:', notifError)
       // Don't fail the cancellation if notification fails
+    }
+
+    // Create client notification if appointment has a user_id
+    if (data.user_id) {
+      try {
+        // Format date and time for display
+        const formatDate = (dateStr: string) => {
+          const date = new Date(dateStr)
+          return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+        }
+
+        const formatTime = (timeStr: string) => {
+          const [hours, minutes] = timeStr.split(':')
+          const hour = parseInt(hours, 10)
+          const ampm = hour >= 12 ? 'PM' : 'AM'
+          const displayHour = hour % 12 || 12
+          return `${displayHour}:${minutes} ${ampm}`
+        }
+
+        const message = `Your appointment for ${data.service} on ${formatDate(data.appointment_date)} at ${formatTime(data.appointment_time)} has been cancelled.`
+
+        await createClientNotification({
+          user_id: data.user_id,
+          admin_id: null,
+          appointment_id: appointment_id,
+          type: 'appointment_cancelled',
+          message: message,
+          cancellation_reason: data.worker || 'Admin', // Store worker name
+          is_read: false,
+        })
+      } catch (clientNotifError) {
+        console.warn('Failed to create client notification for cancellation:', clientNotifError)
+        // Don't fail the cancellation if client notification fails
+      }
     }
 
     return NextResponse.json(
